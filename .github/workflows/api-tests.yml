@@ -1,0 +1,49 @@
+name: PostAir Data Validation Suite
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js Environment
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Newman CLI & Reporter
+        run: |
+          npm install -g newman newman-reporter-htmlextra
+
+      - name: Start Mock Server
+        run: |
+          node mock-server.js &
+          sleep 4
+
+      - name: Verify Health Check
+        run: |
+          curl -f http://localhost:3001/health || exit 1
+
+      - name: Run Newman Data Validation Suite
+        run: |
+          newman run PostAir_Data_Validation.postman_collection.json \
+            -e PostAirTesting.postman_environment.json \
+            --env-var "baseUrl=localhost:3001" \
+            --reporters cli,htmlextra \
+            --reporter-htmlextra-export newman-report.html
+
+      - name: Upload Test Report Artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: newman-data-validation-report
+          path: newman-report.html

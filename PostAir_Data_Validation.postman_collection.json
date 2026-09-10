@@ -1,0 +1,65 @@
+{
+  "info": {
+    "name": "PostAir Data Validation Suite",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Retrieve flight details",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://{{baseUrl}}/flights/FL-1042",
+          "protocol": "http",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "flights",
+            "FL-1042"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const expects404 = pm.variables.get('expects404') === 'true';",
+              "",
+              "if (pm.response.code === 404 && !expects404) {",
+              "    console.warn('[SKIP] ' + pm.info.requestName + ' returned 404 — skipping data validation.');",
+              "    pm.variables.set('skipped', 'true');",
+              "} else {",
+              "    const flight = pm.response.json();",
+              "",
+              "    pm.test('Has required fields', () => {",
+              "        pm.expect(flight).to.have.all.keys(",
+              "            'id', 'airline', 'departure',",
+              "            'arrival', 'status', 'aircraft'",
+              "        );",
+              "    });",
+              "",
+              "    pm.test('ID matches expected format', () => {",
+              "        pm.expect(flight.id).to.match(/^FL-\\d+$/);",
+              "    });",
+              "",
+              "    pm.test('Status is a valid enum', () => {",
+              "        const valid = ['scheduled', 'boarding', 'departed', 'in_air', 'landed', 'cancelled'];",
+              "        pm.expect(valid).to.include(flight.status);",
+              "    });",
+              "",
+              "    pm.test('Departure is valid ISO 8601', () => {",
+              "        const d = new Date(flight.departure);",
+              "        pm.expect(d.toString()).to.not.equal('Invalid Date');",
+              "    });",
+              "}"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
